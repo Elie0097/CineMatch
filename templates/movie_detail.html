@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}{{ movie.title }} - CineMatch{% endblock %}
+{% block content %}
+
+<div class="movie-detail">
+    {% if movie.backdrop_path %}
+    <div class="backdrop" style="background-image: url('https://image.tmdb.org/t/p/w1280{{ movie.backdrop_path }}')"></div>
+    {% endif %}
+
+    <div class="container">
+        <div class="detail-layout">
+            <div class="detail-poster">
+                {% if movie.poster_path %}
+                    <img src="{{ image_base }}{{ movie.poster_path }}" alt="{{ movie.title }}" class="detail-poster-img">
+                {% else %}
+                    <div class="movie-poster-placeholder detail-poster-placeholder">
+                        <span>&#9654;</span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="detail-info">
+                <div class="detail-meta-row">
+                    {% if movie.release_date %}
+                        <span class="detail-year">{{ movie.release_date[:4] }}</span>
+                    {% endif %}
+                    {% if movie.runtime %}
+                        <span class="detail-runtime">{{ movie.runtime }} min</span>
+                    {% endif %}
+                    {% if omdb and omdb.Rated and omdb.Rated != 'N/A' %}
+                        <span class="detail-rated">{{ omdb.Rated }}</span>
+                    {% endif %}
+                    {% if movie.vote_average %}
+                        <span class="detail-tmdb-score">&#9733; {{ "%.1f"|format(movie.vote_average) }} TMDB</span>
+                    {% endif %}
+                </div>
+
+                <h1 class="detail-title">{{ movie.title }}</h1>
+
+                {% if director %}
+                <div class="detail-director">
+                    <span class="detail-director-label">Directed by</span>
+                    <span class="detail-director-name">{{ director.name }}</span>
+                    {% if current_user.is_authenticated %}
+                        {% if director.id in favorite_person_ids %}
+                            <form method="POST" action="{{ url_for('favorite_person_remove', tmdb_person_id=director.id) }}" class="fav-inline-form">
+                                <button type="submit" class="fav-btn fav-btn-active" title="Remove from favorites">&#10084;</button>
+                            </form>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('favorite_person_add') }}" class="fav-inline-form">
+                                <input type="hidden" name="tmdb_person_id" value="{{ director.id }}">
+                                <input type="hidden" name="name" value="{{ director.name }}">
+                                <input type="hidden" name="profile_path" value="{{ director.profile_path or '' }}">
+                                <input type="hidden" name="known_for_department" value="Directing">
+                                <button type="submit" class="fav-btn" title="Favorite this director">&#9825;</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if movie.genres %}
+                <div class="detail-genres">
+                    {% for genre in movie.genres %}
+                        <span class="genre-tag">{{ genre.name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if movie.tagline %}
+                    <p class="detail-tagline"><em>{{ movie.tagline }}</em></p>
+                {% endif %}
+
+                {% if movie.overview %}
+                    <p class="detail-overview">{{ movie.overview }}</p>
+                {% endif %}
+
+                <!-- Scores row: OMDB scores + CineMatch community score -->
+                {% set has_scores = omdb and (
+                    (omdb.Metascore and omdb.Metascore != 'N/A') or
+                    (omdb.Ratings) or
+                    community_rating
+                ) %}
+                {% if has_scores %}
+                <div class="scores-row">
+                    {% if omdb and omdb.Metascore and omdb.Metascore != 'N/A' %}
+                    {% set ms = omdb.Metascore | int %}
+                    <div class="score-badge score-meta {% if ms >= 61 %}score-good{% elif ms >= 40 %}score-mixed{% else %}score-bad{% endif %}">
+                        <span class="score-value">{{ omdb.Metascore }}</span>
+                        <span class="score-label">Metacritic</span>
+                    </div>
+                    {% endif %}
+
+                    {% if omdb and omdb.Ratings %}
+                    {% for r in omdb.Ratings %}
+                        {% if r.Source == 'Rotten Tomatoes' %}
+                        {% set rt_val = r.Value | replace('%','') | int %}
+                        <div class="score-badge score-rt {% if rt_val >= 60 %}score-good{% elif rt_val >= 40 %}score-mixed{% else %}score-bad{% endif %}">
+                            <span class="score-value">{{ r.Value }}</span>
+                            <span class="score-label">Rotten Tomatoes</span>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    {% endif %}
+
+                    {% if community_rating %}
+                    <div class="score-badge score-community">
+                        <span class="score-value">{{ community_rating }}<span class="score-max">/5</span></span>
+                        <span class="score-label">CineMatch &middot; {{ rating_count }} vote{% if rating_count != 1 %}s{% endif %}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif community_rating %}
+                <div class="community-rating">
+                    <span class="community-score">&#9733; {{ community_rating }}</span>
+                    <span class="community-label">CineMatch score &middot; {{ rating_count }} rating{% if rating_count != 1 %}s{% endif %}</span>
+                </div>
+                {% endif %}
+
+                <!-- OMDB extra details: box office + awards -->
+                {% if omdb %}
+                <div class="omdb-details">
+                    {% if omdb.BoxOffice and omdb.BoxOffice != 'N/A' %}
+                    <div class="omdb-item">
+                        <span class="omdb-icon">&#128178;</span>
+                        <div>
+                            <span class="omdb-label">Box Office</span>
+                            <span class="omdb-value">{{ omdb.BoxOffice }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if omdb.Awards and omdb.Awards != 'N/A' %}
+                    <div class="omdb-item">
+                        <span class="omdb-icon">&#127942;</span>
+                        <div>
+                            <span class="omdb-label">Awards</span>
+                            <span class="omdb-value">{{ omdb.Awards }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="rating-section">
+                    {% if current_user.is_authenticated %}
+                        <h3 class="rating-label">
+                            {% if user_rating %}Your rating{% else %}Rate this film{% endif %}
+                        </h3>
+                        <form method="POST" action="{{ url_for('rate_movie', tmdb_id=movie.id) }}" class="rating-form">
+                            <div class="star-rating" data-current="{{ user_rating or 0 }}">
+                                {% for i in range(1, 6) %}
+                                <button type="submit" name="score" value="{{ i }}" class="star-btn {% if user_rating and i <= user_rating %}active{% endif %}" title="{{ i }} star{% if i != 1 %}s{% endif %}">
+                                    &#9733;
+                                </button>
+                                {% endfor %}
+                            </div>
+                            {% if user_rating %}
+                                <p class="rated-note">You gave this {{ user_rating }} star{% if user_rating != 1 %}s{% endif %}. Click to update.</p>
+                            {% endif %}
+                        </form>
+
+                        <div class="detail-action-row">
+                            {% if on_watchlist %}
+                                <form method="POST" action="{{ url_for('watchlist_remove', tmdb_id=movie.id) }}">
+                                    <button type="submit" class="btn btn-watchlist btn-watchlist-active">
+                                        &#10003; On Watchlist
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('watchlist_add', tmdb_id=movie.id) }}">
+                                    <button type="submit" class="btn btn-watchlist">
+                                        + Add to Watchlist
+                                    </button>
+                                </form>
+                            {% endif %}
+                            {% if is_watched %}
+                                <form method="POST" action="{{ url_for('watched_unmark', tmdb_id=movie.id) }}">
+                                    <button type="submit" class="btn btn-watched-active">&#10003; Watched</button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('watched_mark', tmdb_id=movie.id) }}">
+                                    <input type="hidden" name="title" value="{{ movie.title }}">
+                                    <input type="hidden" name="poster_path" value="{{ movie.poster_path or '' }}">
+                                    <button type="submit" class="btn btn-outline">Mark as Watched</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="rating-cta">
+                            <a href="{{ url_for('login') }}">Sign in</a> to rate this film and get personalized recommendations.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Official Trailer -->
+        {% if trailer_video_id %}
+        <div class="trailer-section">
+            <h2 class="section-title">Official Trailer</h2>
+            <div class="trailer-wrapper">
+                <iframe
+                    class="trailer-iframe"
+                    src="https://www.youtube.com/embed/{{ trailer_video_id }}?rel=0&modestbranding=1"
+                    title="{{ movie.title }} — Official Trailer"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                    loading="lazy">
+                </iframe>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if cast %}
+        <div class="cast-section">
+            <h2 class="section-title">Cast</h2>
+            <div class="cast-grid">
+                {% for person in cast %}
+                <div class="cast-card">
+                    {% if person.profile_path %}
+                        <img src="https://image.tmdb.org/t/p/w185{{ person.profile_path }}" alt="{{ person.name }}" class="cast-photo">
+                    {% else %}
+                        <div class="cast-photo-placeholder">&#128100;</div>
+                    {% endif %}
+                    <p class="cast-name">{{ person.name }}</p>
+                    <p class="cast-character">{{ person.character }}</p>
+                    {% if current_user.is_authenticated %}
+                        <div class="cast-fav">
+                            {% if person.id in favorite_person_ids %}
+                                <form method="POST" action="{{ url_for('favorite_person_remove', tmdb_person_id=person.id) }}">
+                                    <button type="submit" class="cast-fav-btn cast-fav-active" title="Remove from favorites">&#10084; Favorited</button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('favorite_person_add') }}">
+                                    <input type="hidden" name="tmdb_person_id" value="{{ person.id }}">
+                                    <input type="hidden" name="name" value="{{ person.name }}">
+                                    <input type="hidden" name="profile_path" value="{{ person.profile_path or '' }}">
+                                    <input type="hidden" name="known_for_department" value="Acting">
+                                    <button type="submit" class="cast-fav-btn" title="Favorite this actor">&#9825; Favorite</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if because_liked %}
+        <div class="because-section">
+            <h2 class="section-title">Because you liked <em>{{ because_liked.source_title }}</em></h2>
+            <div class="movie-grid movie-grid-4">
+                {% for movie in because_liked.movies %}
+                <a href="{{ url_for('movie_detail', tmdb_id=movie.id) }}" class="movie-card">
+                    {% if movie.poster_path %}
+                        <img src="{{ image_base }}{{ movie.poster_path }}" alt="{{ movie.title }}" class="movie-poster" loading="lazy">
+                    {% else %}
+                        <div class="movie-poster-placeholder"><span>&#9654;</span></div>
+                    {% endif %}
+                    <div class="movie-card-info">
+                        <p class="movie-card-title">{{ movie.title }}</p>
+                        <p class="movie-card-meta">
+                            {% if movie.release_date %}{{ movie.release_date[:4] }}{% endif %}
+                            {% if movie.vote_average %}&nbsp;&middot;&nbsp;&#9733; {{ "%.1f"|format(movie.vote_average) }}{% endif %}
+                        </p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if similar %}
+        <div class="similar-section">
+            <h2 class="section-title">Similar Films</h2>
+            <div class="movie-grid movie-grid-8">
+                {% for movie in similar %}
+                <a href="{{ url_for('movie_detail', tmdb_id=movie.id) }}" class="movie-card">
+                    {% if movie.poster_path %}
+                        <img src="{{ image_base }}{{ movie.poster_path }}" alt="{{ movie.title }}" class="movie-poster" loading="lazy">
+                    {% else %}
+                        <div class="movie-poster-placeholder"><span>&#9654;</span></div>
+                    {% endif %}
+                    <div class="movie-card-info">
+                        <p class="movie-card-title">{{ movie.title }}</p>
+                        <p class="movie-card-meta">
+                            {% if movie.release_date %}{{ movie.release_date[:4] }}{% endif %}
+                            {% if movie.vote_average %}&nbsp;&middot;&nbsp;&#9733; {{ "%.1f"|format(movie.vote_average) }}{% endif %}
+                        </p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

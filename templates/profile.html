@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}{{ current_user.username }} - CineMatch{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div class="container">
+        <div class="profile-header">
+            <div class="profile-avatar">{{ current_user.username[0].upper() }}</div>
+            <div>
+                <h1>{{ current_user.username }}</h1>
+                <p class="page-subtitle">Member since {{ current_user.created_at.strftime('%B %Y') }}</p>
+            </div>
+        </div>
+        <div class="profile-stats">
+            <div class="stat">
+                <span class="stat-value">{{ rated_movies|length }}</span>
+                <span class="stat-label">Films Rated</span>
+            </div>
+            {% if avg_score %}
+            <div class="stat">
+                <span class="stat-value">{{ avg_score }}</span>
+                <span class="stat-label">Avg Rating</span>
+            </div>
+            {% endif %}
+            <div class="stat">
+                <span class="stat-value">{{ watched_count }}</span>
+                <span class="stat-label">Watched</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ favorite_people|length }}</span>
+                <span class="stat-label">Favorites</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- Preferences section -->
+    <div class="pref-section" id="preferences">
+        <div class="pref-header">
+            <h2 class="section-title" style="margin-bottom:0">My Preferences</h2>
+            <button class="btn btn-outline btn-sm pref-toggle" id="pref-toggle">Edit</button>
+        </div>
+
+        {% if prefs and (prefs.favorite_genre_ids or prefs.min_tmdb_rating or prefs.preferred_decade) %}
+        <div class="pref-summary" id="pref-summary">
+            {% if prefs.favorite_genre_ids %}
+            <span class="pref-tag">
+                Genres:
+                {% for g in genres %}{% if g.id|string in pref_genre_ids %}<strong>{{ g.name }}</strong>{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}
+            </span>
+            {% endif %}
+            {% if prefs.min_tmdb_rating and prefs.min_tmdb_rating > 0 %}
+            <span class="pref-tag">Min rating: <strong>{{ prefs.min_tmdb_rating }}+</strong></span>
+            {% endif %}
+            {% if prefs.preferred_decade %}
+            <span class="pref-tag">Era: <strong>{{ prefs.preferred_decade }}</strong></span>
+            {% endif %}
+            <a href="{{ url_for('recommendations') }}" class="pref-rec-link">View Recommendations &#8594;</a>
+        </div>
+        {% else %}
+        <p class="pref-empty" id="pref-summary">Set your preferences to pre-filter your recommendations page.</p>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('save_preferences') }}" class="pref-form" id="pref-form" style="display:none">
+            <div class="pref-form-inner">
+                <div class="pref-field">
+                    <label class="pref-label">Favourite Genres <span class="pref-hint">(pick up to 5)</span></label>
+                    <div class="pref-genre-grid">
+                        {% for g in genres %}
+                        <label class="pref-genre-chip {% if g.id|string in pref_genre_ids %}pref-genre-chip-on{% endif %}">
+                            <input type="checkbox" name="genre_ids" value="{{ g.id }}"
+                                   {% if g.id|string in pref_genre_ids %}checked{% endif %}
+                                   class="pref-genre-input">
+                            {{ g.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="pref-row-2">
+                    <div class="pref-field">
+                        <label class="pref-label">Minimum TMDB Score</label>
+                        <select name="min_tmdb_rating" class="form-input form-select pref-select">
+                            <option value="0">No minimum</option>
+                            <option value="5"  {% if prefs and prefs.min_tmdb_rating == 5 %}selected{% endif %}>5+</option>
+                            <option value="6"  {% if prefs and prefs.min_tmdb_rating == 6 %}selected{% endif %}>6+</option>
+                            <option value="7"  {% if prefs and prefs.min_tmdb_rating == 7 %}selected{% endif %}>7+</option>
+                            <option value="7.5"{% if prefs and prefs.min_tmdb_rating == 7.5 %}selected{% endif %}>7.5+</option>
+                            <option value="8"  {% if prefs and prefs.min_tmdb_rating == 8 %}selected{% endif %}>8+</option>
+                        </select>
+                    </div>
+                    <div class="pref-field">
+                        <label class="pref-label">Preferred Era</label>
+                        <select name="preferred_decade" class="form-input form-select pref-select">
+                            <option value="">Any era</option>
+                            {% for decade in ['1960s','1970s','1980s','1990s','2000s','2010s','2020s'] %}
+                            <option value="{{ decade }}"{% if prefs and prefs.preferred_decade == decade %} selected{% endif %}>{{ decade }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="pref-actions">
+                    <button type="submit" class="btn btn-primary">Save Preferences</button>
+                    <button type="button" class="btn btn-outline" id="pref-cancel">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="section-divider"></div>
+
+    {% if favorite_people %}
+    <h2 class="section-title">Favourite Cast &amp; Directors</h2>
+    <div class="favorites-grid">
+        {% for person in favorite_people %}
+        <div class="fav-person-card">
+            {% if person.profile_path %}
+                <img src="https://image.tmdb.org/t/p/w185{{ person.profile_path }}" alt="{{ person.name }}" class="fav-person-photo">
+            {% else %}
+                <div class="fav-person-photo-placeholder">&#128100;</div>
+            {% endif %}
+            <div class="fav-person-info">
+                <p class="fav-person-name">{{ person.name }}</p>
+                <p class="fav-person-role">{{ person.known_for_department or 'Actor' }}</p>
+            </div>
+            <form method="POST" action="{{ url_for('favorite_person_remove', tmdb_person_id=person.tmdb_person_id) }}" class="fav-remove-form">
+                <button type="submit" class="fav-remove-btn" title="Remove from favorites">&#x2715;</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="section-divider"></div>
+    {% endif %}
+
+    {% if rated_movies %}
+        <h2 class="section-title">Your Ratings</h2>
+        <div class="rated-list">
+            {% for item in rated_movies %}
+            <a href="{{ url_for('movie_detail', tmdb_id=item.movie.tmdb_id) }}" class="rated-item">
+                {% if item.movie.poster_path %}
+                    <img src="{{ image_base }}{{ item.movie.poster_path }}" alt="{{ item.movie.title }}" class="rated-poster">
+                {% else %}
+                    <div class="rated-poster-placeholder">&#9654;</div>
+                {% endif %}
+                <div class="rated-info">
+                    <p class="rated-title">{{ item.movie.title }}</p>
+                    {% if item.movie.release_date %}
+                        <p class="rated-meta">{{ item.movie.release_date[:4] }}</p>
+                    {% endif %}
+                    {% if item.movie.genres %}
+                        <p class="rated-genres">{{ item.movie.genres }}</p>
+                    {% endif %}
+                </div>
+                <div class="rated-score">
+                    <div class="rated-stars">
+                        {% for i in range(1, 6) %}
+                            <span class="rated-star {% if i <= item.score %}rated-star-on{% endif %}">&#9733;</span>
+                        {% endfor %}
+                    </div>
+                    <span class="rated-date">{{ item.rated_at.strftime('%b %d, %Y') }}</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">&#9733;</div>
+            <h3>No ratings yet</h3>
+            <p>Rate films to track what you've watched and unlock personalized recommendations.</p>
+            <a href="{{ url_for('movies') }}" class="btn btn-primary">Browse Movies</a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+(function() {
+    const toggle = document.getElementById('pref-toggle');
+    const form   = document.getElementById('pref-form');
+    const summary = document.getElementById('pref-summary');
+    const cancel  = document.getElementById('pref-cancel');
+
+    if (toggle) {
+        toggle.addEventListener('click', function() {
+            const open = form.style.display !== 'none';
+            form.style.display    = open ? 'none' : 'block';
+            summary.style.display = open ? '' : 'none';
+            toggle.textContent    = open ? 'Edit' : 'Cancel';
+        });
+    }
+    if (cancel) {
+        cancel.addEventListener('click', function() {
+            form.style.display    = 'none';
+            summary.style.display = '';
+            toggle.textContent    = 'Edit';
+        });
+    }
+
+    // If page loaded with #preferences hash (after save redirect), auto-expand
+    if (window.location.hash === '#preferences') {
+        if (form) {
+            form.style.display = 'none';
+            summary.style.display = '';
+        }
+    }
+
+    // Genre chip limit (max 5)
+    const checkboxes = document.querySelectorAll('.pref-genre-input');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const checked = document.querySelectorAll('.pref-genre-input:checked');
+            if (checked.length > 5) {
+                this.checked = false;
+                return;
+            }
+            this.closest('.pref-genre-chip').classList.toggle('pref-genre-chip-on', this.checked);
+        });
+    });
+})();
+</script>
+
+{% endblock %}

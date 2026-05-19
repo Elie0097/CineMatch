@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}CineMatch - Discover Your Next Favorite Film{% endblock %}
+{% block content %}
+
+{% if not api_configured %}
+<div class="api-banner">
+    <strong>Setup required:</strong> Add your <a href="https://www.themoviedb.org/settings/api" target="_blank">TMDB API key</a> as the <code>TMDB_API_KEY</code> environment variable to start browsing movies.
+</div>
+{% endif %}
+
+<section class="hero">
+    <div class="hero-content">
+        <h1 class="hero-title">Find films <em>made for you</em></h1>
+        <p class="hero-subtitle">Rate movies you love. Our recommendation engine learns your taste and surfaces films you'll actually watch.</p>
+        <div class="hero-actions">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('movies') }}" class="btn btn-primary btn-lg">Browse Movies</a>
+                <a href="{{ url_for('recommendations') }}" class="btn btn-outline btn-lg">My Recommendations</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">Get Started Free</a>
+                <a href="{{ url_for('movies') }}" class="btn btn-outline btn-lg">Browse Movies</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% if trending %}
+<section class="section">
+    <div class="container">
+        <h2 class="section-title">Trending This Week</h2>
+        <div class="movie-grid movie-grid-4">
+            {% for movie in trending %}
+            <a href="{{ url_for('movie_detail', tmdb_id=movie.id) }}" class="movie-card">
+                {% if movie.poster_path %}
+                    <img src="{{ image_base }}{{ movie.poster_path }}" alt="{{ movie.title }}" class="movie-poster" loading="lazy">
+                {% else %}
+                    <div class="movie-poster-placeholder">
+                        <span>&#9654;</span>
+                    </div>
+                {% endif %}
+                <div class="movie-card-info">
+                    <p class="movie-card-title">{{ movie.title }}</p>
+                    <p class="movie-card-meta">
+                        {% if movie.release_date %}{{ movie.release_date[:4] }}{% endif %}
+                        {% if movie.vote_average %}&nbsp;&middot;&nbsp;&#9733; {{ "%.1f"|format(movie.vote_average) }}{% endif %}
+                    </p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if featured %}
+<section class="section section-alt">
+    <div class="container">
+        <h2 class="section-title">Popular Right Now</h2>
+        <div class="movie-grid movie-grid-6">
+            {% for movie in featured %}
+            <a href="{{ url_for('movie_detail', tmdb_id=movie.id) }}" class="movie-card movie-card-sm">
+                {% if movie.poster_path %}
+                    <img src="{{ image_base }}{{ movie.poster_path }}" alt="{{ movie.title }}" class="movie-poster" loading="lazy">
+                {% else %}
+                    <div class="movie-poster-placeholder movie-poster-placeholder-sm">
+                        <span>&#9654;</span>
+                    </div>
+                {% endif %}
+                <div class="movie-card-info">
+                    <p class="movie-card-title">{{ movie.title }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="section">
+    <div class="container">
+        <div class="how-it-works">
+            <h2 class="section-title text-center">How It Works</h2>
+            <div class="steps-grid">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <h3>Create an account</h3>
+                    <p>Sign up for free in seconds. No credit card needed.</p>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <h3>Rate movies</h3>
+                    <p>Give 1-5 stars to films you have seen. Rate at least 3 to unlock recommendations.</p>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <h3>Get recommendations</h3>
+                    <p>Our ML engine finds users with similar taste and surfaces films you haven't seen yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

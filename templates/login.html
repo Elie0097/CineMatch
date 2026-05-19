@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Sign In - CineMatch{% endblock %}
+{% block content %}
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-brand">&#9654;</div>
+            <h1>Welcome back</h1>
+            <p>Sign in to your CineMatch account</p>
+        </div>
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-input" required autocomplete="username" autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-input" required autocomplete="current-password">
+            </div>
+            <div class="form-row">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="remember"> Remember me
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+        <p class="auth-switch">
+            Don't have an account? <a href="{{ url_for('register') }}">Create one free</a>
+        </p>
+    </div>
+</div>
+
+{% endblock %}

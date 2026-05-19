@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CineMatch{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="nav-brand">
+                <span class="brand-icon">&#9654;</span> CineMatch
+            </a>
+            <div class="nav-links">
+                <a href="{{ url_for('movies') }}" class="nav-link">Browse</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('recommendations') }}" class="nav-link">For You</a>
+                    <a href="{{ url_for('watchlist') }}" class="nav-link">Watchlist</a>
+                    <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
+                    <a href="{{ url_for('logout') }}" class="nav-link nav-link-subtle">Sign Out</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="nav-link">Sign In</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">Join Free</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        {{ message }}
+                        <button class="flash-close" onclick="this.parentElement.remove()">&#x2715;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="back-bar" id="back-bar" style="display:none">
+        <div class="back-bar-inner">
+            <button class="back-btn" onclick="history.back()">&#8592; Back</button>
+        </div>
+    </div>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <span class="brand-icon">&#9654;</span> CineMatch &mdash; Personalized movie recommendations powered by ML
+            <span class="footer-sep">|</span> Data from <a href="https://www.themoviedb.org" target="_blank">TMDB</a>
+            <span class="footer-sep">|</span> <a href="{{ url_for('contact') }}">Contact &amp; Feedback</a>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+    (function() {
+        var homePages = ['/', '/movies', '/login', '/register'];
+        var path = window.location.pathname;
+        var isHome = homePages.indexOf(path) !== -1 || path === '';
+        if (!isHome && window.history.length > 1) {
+            document.getElementById('back-bar').style.display = '';
+        }
+    })();
+    </script>
+</body>
+</html>

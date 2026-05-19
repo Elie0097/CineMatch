@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Browse Movies - CineMatch{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div class="container">
+        <h1>Browse Movies</h1>
+        <form class="search-form" method="GET" action="{{ url_for('movies') }}" autocomplete="off" id="browse-search-form">
+            <div class="browse-search-wrap">
+                <input type="text" name="q" value="{{ query }}" placeholder="Search for a movie..." class="search-input" id="browse-search-input" aria-autocomplete="list" aria-controls="browse-search-dropdown">
+                <div class="nav-search-dropdown" id="browse-search-dropdown" role="listbox"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            {% if query %}
+                <a href="{{ url_for('movies') }}" class="btn btn-outline">Clear</a>
+            {% endif %}
+        </form>
+        {% if not query %}
+        <div class="genre-filters">
+            <a href="{{ url_for('movies') }}" class="genre-pill {% if not selected_genre %}active{% endif %}">All</a>
+            {% for genre in genres %}
+                <a href="{{ url_for('movies', genre=genre.id) }}" class="genre-pill {% if selected_genre == genre.id|string %}active{% endif %}">{{ genre.name }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if not api_configured %}
+<div class="container">
+    <div class="empty-state">
+        <div class="empty-icon">&#9654;</div>
+        <h3>API Key Required</h3>
+        <p>Add your <a href="https://www.themoviedb.org/settings/api" target="_blank">TMDB API key</a> as the <code>TMDB_API_KEY</code> environment variable to browse movies.</p>
+    </div>
+</div>
+{% elif movies %}
+<div class="container">
+    {% if query %}
+        <p class="results-info">Results for "<strong>{{ query }}</strong>"</p>
+    {% endif %}
+    <div class="movie-grid movie-grid-5">
+        {% for movie in movies %}
+        <a href="{{ url_for('movie_detail', tmdb_id=movie.id) }}" class="movie-card">
+            {% if movie.poster_path %}
+                <img src="{{ image_base }}{{ movie.poster_path }}" alt="{{ movie.title }}" class="movie-poster" loading="lazy">
+            {% else %}
+                <div class="movie-poster-placeholder">
+                    <span>&#9654;</span>
+                </div>
+            {% endif %}
+            {% if movie.id in user_ratings %}
+                <div class="movie-rated-badge">
+                    {% for i in range(user_ratings[movie.id]) %}&#9733;{% endfor %}
+                </div>
+            {% endif %}
+            <div class="movie-card-info">
+                <p class="movie-card-title">{{ movie.title }}</p>
+                <p class="movie-card-meta">
+                    {% if movie.release_date %}{{ movie.release_date[:4] }}{% endif %}
+                    {% if movie.vote_average %}&nbsp;&middot;&nbsp;&#9733; {{ "%.1f"|format(movie.vote_average) }}{% endif %}
+                </p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+            <a href="{{ url_for('movies', q=query, genre=selected_genre, page=page-1) }}" class="page-btn">&larr; Prev</a>
+        {% endif %}
+        <span class="page-info">Page {{ page }} of {{ total_pages }}</span>
+        {% if page < total_pages %}
+            <a href="{{ url_for('movies', q=query, genre=selected_genre, page=page+1) }}" class="page-btn">Next &rarr;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="container">
+    <div class="empty-state">
+        <div class="empty-icon">&#128270;</div>
+        <h3>No movies found</h3>
+        <p>Try a different search term.</p>
+        <a href="{{ url_for('movies') }}" class="btn btn-primary">Browse All</a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

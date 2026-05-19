@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Recommended for You - CineMatch{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div class="container">
+        <div class="rec-page-header">
+            <div>
+                <h1>Recommended for You</h1>
+                <p class="page-subtitle">Based on your ratings and users with similar taste</p>
+            </div>
+            <a href="{{ url_for('profile') }}#preferences" class="btn btn-outline btn-sm">Edit Preferences</a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if user_rating_count < 3 %}
+    <div class="onboarding-card">
+        <div class="onboarding-icon">&#127909;</div>
+        <h2>Rate a few more films</h2>
+        <p>You've rated <strong>{{ user_rating_count }}</strong> film{% if user_rating_count != 1 %}s{% endif %} so far. Rate at least <strong>3</strong> to unlock personalized ML recommendations.</p>
+        <div class="onboarding-progress">
+            <div class="onboarding-bar" style="width: {{ [user_rating_count / 3 * 100, 100]|min }}%"></div>
+        </div>
+        <p class="onboarding-count">{{ user_rating_count }}/3 ratings</p>
+        <a href="{{ url_for('movies') }}" class="btn btn-primary">Browse &amp; Rate Movies</a>
+    </div>
+    {% else %}
+
+    {% if user_rating_count >= 3 %}
+    <div class="rec-info">
+        <span class="rec-badge">ML-powered</span>
+        Based on your {{ user_rating_count }} rating{% if user_rating_count != 1 %}s{% endif %} and collaborative filtering
+    </div>
+    {% endif %}
+
+    <!-- Server-side filter bar: submits as GET so URL always matches results -->
+    <form method="GET" action="{{ url_for('recommendations') }}" class="filter-bar" id="filter-bar">
+        <div class="filter-bar-inner">
+            <div class="filter-group">
+                <label class="filter-label" for="f-genre">Genre</label>
+                <select class="filter-select" id="f-genre" name="genre">
+                    <option value="">All Genres</option>
+                    {% for g in genres %}
+                    <option value="{{ g.id }}" {% if genre_filter == g.id|string %}selected{% endif %}>{{ g.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="f-year-from">From Year</label>
+                <select class="filter-select" id="f-year-from" name="year_from">
+                    <option value="">Any</option>
+                    {% for y in [1960,1970,1980,1990,2000,2005,2010,2015,2020] %}
+                    <option value="{{ y }}" {% if year_from == y|string %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="f-year-to">To Year</label>
+                <select class="filter-select" id="f-year-to" name="year_to">
+                    <option value="">Any</option>
+                    {% for y in [1979,1989,1999,2009,2014,2019,2024,2025] %}
+                    <option value="{{ y }}" {% if year_to == y|string %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="f-rating">Min Rating</label>
+                <select class="filter-select" id="f-rating" name="min_rating">
+                    <option value="">Any</option>
+                    <option value="5"   {% if min_rating == '5'   %}selected{% endif %}>5+</option>
+                    <option value="6"   {% if min_rating == '6'   %}selected{% endif %}>6+</option>
+                    <option value="7"   {% if min_rating == '7'   %}selected{% endif %}>7+</option>
+                    <option value="7.5" {% if min_rating == '7.5' %}selected{% endif %}>7.5+</option>
+                    <option value="8"   {% if min_rating == '8'   %}selected{% endif %}>8+</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="f-sort">Sort By</label>
+                <select class="filter-select" id="f-sort" name="sort_by">
+                    <option value="match"      {% if sort_by == 'match'      %}selected{% endif %}>Best Match</option>
+                    <option value="rating"     {% if sort_by == 'rating'     %}selected{% endif %}>Highest Rated</option>
+                    <option value="year_desc"  {% if sort_by == 'year_desc'  %}selected{% endif %}>Newest First</option>
+                    <option value="year_asc"   {% if sort_by == 'year_asc'   %}selected{% endif %}>Oldest First</option>
+                    <option value="popularity" {% if sort_by == 'popularity' %}selected{% endif %}>Most Popular</option>
+                </select>
+            </div>
+            <div class="filter-group filter-btns">
+                <label class="filter-label">&nbsp;</label>
+                <div class="filter-btn-row">
+                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                    <a href="{{ url_for('recommendations') }}" class="btn btn-outline btn-sm">Reset</a>
+                </div>
+            </div>
+        </div>
+        <div class="filter-count">
+            Showing <strong>{{ movies|length }}</strong> film{% if movies|length != 1 %}s{% endif %}
+            {% if genre_filter %}
+                {% for g in genres %}{% if g.id|string == genre_filter %}&nbsp;&middot; <span class="filter-active-tag">{{ g.name }}</span>{% endif %}{% endfor %}
+            {% endif %}
+            {% if min_rating %}&nbsp;&middot; <span class="filter-active-tag">{{ min_rating }}+ rating</span>{% endif %}
+            {% if year_from or year_to %}&nbsp;&middot; <span class="filter-active-tag">{{ year_from or '...' }}–{{ year_to or 'now' }}</span>{% endif %}
+        </div>
+    </form>
+
+    {% if movies %}
+    <div class="movie-grid movie-grid-4">
+        {% for movie in movies %}
+        <a href="{{ url_for('movie_detail', tmdb_id=movie.id) }}" class="movie-card">
+            {% if movie.poster_path %}
+                <img src="{{ image_base }}{{ movie.poster_path }}" alt="{{ movie.title }}" class="movie-poster" loading="lazy">
+            {% else %}
+                <div class="movie-poster-placeholder"><span>&#9654;</span></div>
+            {% endif %}
+            <div class="movie-card-info">
+                <p class="movie-card-title">{{ movie.title }}</p>
+                <p class="movie-card-meta">
+                    {% if movie.release_date %}{{ movie.release_date[:4] }}{% endif %}
+                    {% if movie.vote_average %}&nbsp;&middot;&nbsp;&#9733; {{ "%.1f"|format(movie.vote_average) }}{% endif %}
+                </p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="rec-footer">
+        <p>Not seeing what you like? <a href="{{ url_for('movies') }}">Rate more movies</a> to improve your recommendations.</p>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">&#127775;</div>
+        <h3>No films match these filters</h3>
+        <p>Try adjusting the filters or <a href="{{ url_for('recommendations') }}">reset them</a>.</p>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+
+{% endblock %}

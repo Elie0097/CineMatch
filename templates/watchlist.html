@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Watchlist - CineMatch{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div class="container">
+        <div class="watchlist-page-header">
+            <div>
+                <h1>Your Watchlist</h1>
+                <p class="page-subtitle">{{ items|length }} film{% if items|length != 1 %}s{% endif %} saved to watch</p>
+            </div>
+            {% if items %}
+                <a href="{{ url_for('movies') }}" class="btn btn-outline">+ Add More</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if items %}
+        <div class="watchlist-grid">
+            {% for item in items %}
+            <div class="watchlist-card">
+                <a href="{{ url_for('movie_detail', tmdb_id=item.tmdb_id) }}" class="watchlist-poster-link">
+                    {% if item.poster_path %}
+                        <img src="{{ image_base }}{{ item.poster_path }}" alt="{{ item.title }}" class="watchlist-poster">
+                    {% else %}
+                        <div class="watchlist-poster-placeholder">&#9654;</div>
+                    {% endif %}
+                </a>
+                <div class="watchlist-card-body">
+                    <a href="{{ url_for('movie_detail', tmdb_id=item.tmdb_id) }}" class="watchlist-title">{{ item.title }}</a>
+                    <p class="watchlist-meta">
+                        {% if item.release_date %}{{ item.release_date[:4] }}{% endif %}
+                        {% if item.vote_average %}&nbsp;&middot;&nbsp;&#9733; {{ "%.1f"|format(item.vote_average) }}{% endif %}
+                    </p>
+                    <p class="watchlist-added">Added {{ item.added_at.strftime('%b %d, %Y') }}</p>
+                    <div class="watchlist-card-actions">
+                        <a href="{{ url_for('movie_detail', tmdb_id=item.tmdb_id) }}" class="btn btn-outline btn-sm">View</a>
+                        {% if item.tmdb_id in watched_ids %}
+                            <form method="POST" action="{{ url_for('watched_unmark', tmdb_id=item.tmdb_id) }}" style="display:inline">
+                                <button type="submit" class="btn btn-watched-active btn-sm">&#10003; Watched</button>
+                            </form>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('watched_mark', tmdb_id=item.tmdb_id) }}" style="display:inline">
+                                <input type="hidden" name="title" value="{{ item.title }}">
+                                <input type="hidden" name="poster_path" value="{{ item.poster_path or '' }}">
+                                <button type="submit" class="btn btn-outline btn-sm">Mark Watched</button>
+                            </form>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('watchlist_remove', tmdb_id=item.tmdb_id) }}" style="display:inline">
+                            <button type="submit" class="btn btn-remove btn-sm">Remove</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">&#128065;</div>
+            <h3>Your watchlist is empty</h3>
+            <p>Browse movies and click "Add to Watchlist" to save films you want to watch later.</p>
+            <a href="{{ url_for('movies') }}" class="btn btn-primary">Browse Movies</a>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
