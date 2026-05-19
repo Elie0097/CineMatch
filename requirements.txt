@@ -1,0 +1,8 @@
+flask==3.0.3
+flask-sqlalchemy==3.1.1
+flask-login==0.6.3
+requests==2.31.0
+scikit-learn==1.5.1
+numpy==1.26.4
+werkzeug==3.0.3
+gunicorn==22.0.0
