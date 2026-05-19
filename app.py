@@ -409,7 +409,7 @@ def recommendations():
             discover_params['primary_release_date.lte'] = f'{year_to}-12-31'
 
         seen = set()
-        for page in range(1, 4):          # up to 3 pages = 60 candidates
+        for page in range(1, 11):          # up to 3 pages = 60 candidates
             discover_params['page'] = page
             data = tmdb_get('discover/movie', discover_params)
             if not data:
@@ -418,7 +418,7 @@ def recommendations():
                 if m['id'] not in rated_ids and m['id'] not in seen:
                     all_movies.append(m)
                     seen.add(m['id'])
-            if len(all_movies) >= 40:
+            if len(all_movies) >= 200:
                 break
     else:
         # No genre filter → popular + top_rated pool + ML picks
